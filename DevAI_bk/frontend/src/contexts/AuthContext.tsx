@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check local storage on mount to persist session across refreshes
     const savedUser = localStorage.getItem('devai_user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
@@ -37,9 +38,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  // Protection against destructuring null errors
+  // Protection: returns a safe fallback if accessed incorrectly
   if (context === undefined || context === null) {
-    return { user: null, login: () => {}, logout: () => {}, loading: true };
+    return { 
+      user: null, 
+      login: () => {}, 
+      logout: () => {}, 
+      loading: true 
+    };
   }
   return context;
 };

@@ -12,7 +12,6 @@ export default function RootLayout({
   useEffect(() => {
     const loadVanta = async () => {
       try {
-        // Dynamic imports to resolve 'three' module error
         const THREE = await import('three');
         (window as any).THREE = THREE;
         const vantaNet = (await import('vanta/dist/vanta.net.min')).default;
@@ -26,9 +25,9 @@ export default function RootLayout({
           minWidth: 200.00,
           scale: 1.00,
           scaleMobile: 1.00,
-          color: 0xffde22,      // Cyber Yellow
-          backgroundColor: 0x0a0a0a,
-          points: 10.00,
+          color: 0xffde22,      // Cyber Yellow branding
+          backgroundColor: 0x0a0a0a, 
+          points: 10.00,        
           maxDistance: 20.00,
           spacing: 16.00,
           showDots: true
@@ -48,18 +47,22 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-general bg-[#0a0a0a] text-white selection:bg-[#ffde22] selection:text-black">
+        {/* FIXED: AuthProvider wraps everything to stop null errors */}
         <AuthProvider>
           <div className="relative min-h-screen overflow-x-hidden">
-            {/* 1. Animated Background Layer */}
-            <div id="vanta-canvas" className="fixed inset-0 z-0 pointer-events-none opacity-50 transition-opacity duration-1000" />
+            {/* Animated Background Layer */}
+            <div 
+              id="vanta-canvas" 
+              className="fixed inset-0 z-0 pointer-events-none opacity-50 transition-opacity duration-1000"
+            />
 
-            {/* 2. Visual Layering: Radial Mask */}
+            {/* Visual Layering: Radial Mask for depth */}
             <div className="fixed inset-0 z-[1] pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,#0a0a0a_90%)]" />
 
-            {/* 3. Visual Layering: Premium Noise/Grain */}
+            {/* Visual Layering: Premium Noise/Grain Texture */}
             <div className="fixed inset-0 z-[2] pointer-events-none opacity-[0.03] bg-[url('/noise.png')] mix-blend-overlay" />
 
-            {/* 4. Content Layer */}
+            {/* Content Layer */}
             <main className="relative z-10 mx-auto max-w-[1440px] px-4 py-6 md:px-8 lg:py-10">
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
                 {children}
