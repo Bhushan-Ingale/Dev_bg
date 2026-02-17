@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Font Configuration */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@layer base {
+  body {
+    @apply bg-[#0a0a0a] text-white font-general antialiased;
+  }
+  
+  /* Global Heading Enforcement */
+  h1, h2, h3, h4, .font-satoshi {
+    font-family: 'Satoshi', sans-serif !important;
+    @apply tracking-tighter uppercase italic;
+  }
+}
+
+@layer utilities {
+  /* Premium Noise Overlay */
+  .noise-overlay {
+    @apply fixed inset-0 z-[9999] pointer-events-none opacity-[0.04];
+    background-image: url('/noise.png');
+    mix-blend-mode: soft-light;
+  }
+  
+  /* Custom Scrollbar for 2026 Aesthetic */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-[#ffde22]/40 transition-colors;
+  }
+}
