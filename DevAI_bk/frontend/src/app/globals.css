@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Font Configuration */
+/* Font Configuration with Fallbacks */
 @font-face {
   font-family: 'Satoshi';
   src: url('/fonts/Satoshi-Black.woff2') format('woff2');
@@ -17,14 +17,20 @@
   font-display: swap;
 }
 
+/* Font Fallbacks - System fonts if custom fonts fail */
+:root {
+  --font-satoshi: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-general: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
 @layer base {
   body {
-    @apply bg-[#0a0a0a] text-white font-general antialiased;
+    @apply bg-[#0a0a0a] text-white antialiased;
+    font-family: var(--font-general);
   }
   
-  /* Global Heading Enforcement */
   h1, h2, h3, h4, .font-satoshi {
-    font-family: 'Satoshi', sans-serif !important;
+    font-family: var(--font-satoshi) !important;
     @apply tracking-tighter uppercase italic;
   }
 }
@@ -47,4 +53,48 @@
   ::-webkit-scrollbar-thumb {
     @apply bg-white/10 rounded-full hover:bg-[#ffde22]/40 transition-colors;
   }
+}
+
+/* Ensure charts have proper dimensions */
+.recharts-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.recharts-surface {
+  overflow: visible;
+}
+/* Force chart containers to be visible */
+.recharts-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 300px !important;
+  background-color: transparent !important;
+}
+
+.recharts-surface {
+  overflow: visible;
+}
+
+.recharts-cartesian-grid line {
+  stroke: #333333 !important;
+}
+
+.recharts-text {
+  fill: #ffffff !important;
+  font-size: 12px !important;
+}
+
+.recharts-tooltip-wrapper {
+  z-index: 1000 !important;
+}
+
+/* Ensure charts are visible */
+.bg-gradient-to-br {
+  background: linear-gradient(135deg, rgba(255,222,34,0.1), rgba(255,137,40,0.05)) !important;
+}
+
+/* Force dark backgrounds for chart containers */
+[class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.05) !important;
 }

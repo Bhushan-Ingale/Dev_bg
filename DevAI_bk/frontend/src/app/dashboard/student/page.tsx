@@ -6,39 +6,33 @@ import { useAuth } from '@/contexts/AuthContext';
 import StudentDashboard from '@/components/StudentDashboard';
 
 export default function StudentDashboardPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
+    console.log('Student page auth check:', { user, loading });
+    
+    if (!loading) {
+      if (!user) {
+        console.log('No user, redirecting to login');
+        router.push('/login');
+      } else if (user.role !== 'student') {
+        console.log('User is not student, redirecting to guide dashboard');
+        router.push('/dashboard/guide');
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  if (!user) {
+  if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#0a0a0a',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '3px solid rgba(255,222,34,0.3)',
-          borderTopColor: '#ffde22',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <style jsx>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#ffde22]/30 border-t-[#ffde22] rounded-full animate-spin" />
       </div>
     );
+  }
+
+  if (!user || user.role !== 'student') {
+    return null;
   }
 
   return <StudentDashboard />;

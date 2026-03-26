@@ -1,38 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Terminal } from 'lucide-react';
+import Navbar from '@/components/Navbar';
+import Hero from '@/components/Hero';
+import Features from '@/components/Features';
+import HowItWorks from '@/components/HowItWorks';
+import Stats from '@/components/Stats';
+import Testimonials from '@/components/Testimonials';
+import CTA from '@/components/CTA';
+import Footer from '@/components/Footer';
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
+export default function LandingPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === 'anything123') {
-      const role = email === 'guide@123' ? 'guide' : 'student';
-      login(email, role);
-      router.replace(`/dashboard/${role}`);
-    } else {
-      alert("Invalid Credentials");
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // CRITICAL FIX: Only redirect on MANUAL login, never automatically
+    // We check if user exists AND we have a real user session
+    // But we want landing page to ALWAYS show first
+    if (mounted && !loading) {
+      // We don't auto-redirect even if user exists
+      // User must explicitly go to login page
+      console.log('Landing page loaded - no auto redirect');
     }
-  };
+  }, [user, loading, mounted, router]);
 
+  // Show loading while checking auth (brief moment)
+  if (!mounted || loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-[#ffde22]/30 border-t-[#ffde22] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // ALWAYS show landing page - NO AUTO REDIRECT
   return (
-    <div className="flex h-screen items-center justify-center">
-      <form onSubmit={handleLogin} className="w-full max-w-md p-10 bg-white/5 border border-white/10 rounded-[2.5rem] backdrop-blur-xl">
-        <div className="flex justify-center mb-6"><Terminal className="text-[#ffde22]" size={40} /></div>
-        <h2 className="text-3xl font-black italic text-center mb-8 font-satoshi">DevAI LOGIN</h2>
-        <div className="space-y-4">
-          <input type="text" placeholder="Squad ID" className="w-full p-4 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-[#ffde22]" onChange={(e) => setEmail(e.target.value)} required />
-          <input type="password" placeholder="Passcode" className="w-full p-4 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-[#ffde22]" onChange={(e) => setPassword(e.target.value)} required />
-          <button type="submit" className="w-full py-4 bg-[#ffde22] text-black font-black rounded-xl shadow-[0_0_20px_rgba(255,222,34,0.3)]">INITIALIZE SESSION</button>
-        </div>
-      </form>
-    </div>
+    <main className="bg-[#0a0a0a] min-h-screen">
+      <Navbar />
+      <Hero />
+      <Stats />
+      <Features />
+      <HowItWorks />
+      <Testimonials />
+      <CTA />
+      <Footer />
+    </main>
   );
 }

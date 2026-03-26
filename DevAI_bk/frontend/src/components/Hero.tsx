@@ -1,68 +1,128 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Github, Sparkles } from 'lucide-react';
-import MagneticButton from './MagneticButton';
+import { ArrowRight, Github, GitCommit, Users, Brain } from 'lucide-react';
 
-/**
- * Hero component for DevAI Landing Page
- * Features GSAP-ready layout, Satoshi/General Sans typography, 
- * and functional routing for the login gateway.
- */
 export default function Hero() {
   const router = useRouter();
 
   return (
-    <section className="relative flex min-h-[80vh] items-center justify-center px-6 overflow-hidden bg-[#0a0a0a]">
-      {/* Visual Layer: Content Container */}
-      <div className="text-center z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-        
-        {/* Version Badge: Using Cyber Yellow palette [#ffde22] */}
-        <div className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1">
-          <Sparkles size={14} className="text-primary" />
-          <span className="font-general text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-            Next-Gen Analytics v2.0
-          </span>
+    <section className="max-w-7xl mx-auto px-6 py-24">
+      <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="animate-fadeInLeft">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#ffde22]/10 rounded-full text-[#ffde22] text-sm font-medium mb-6">
+            <span className="w-2 h-2 bg-[#ffde22] rounded-full animate-pulse"></span>
+            AI-Powered Academic Project Analytics
+          </div>
+          
+          <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+            Monitor student{' '}
+            <span className="bg-gradient-to-r from-[#ffde22] via-[#ff8928] to-[#ff414e] bg-clip-text text-transparent">
+              coding progress
+            </span>{' '}
+            with AI
+          </h1>
+          
+          <p className="text-xl text-white/60 mb-8 max-w-lg">
+            Automatically analyze GitHub repositories, track individual contributions, 
+            and provide personalized feedback without manual code reviews.
+          </p>
+          
+          <div className="flex items-center gap-4 flex-wrap">
+            <button
+              onClick={() => router.push('/login')}
+              className="px-8 py-4 bg-gradient-to-r from-[#ffde22] to-[#ff8928] text-black rounded-xl font-semibold hover:scale-105 transition-all flex items-center gap-2"
+            >
+              Access Dashboard
+              <ArrowRight className="w-5 h-5" />
+            </button>
+            
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-8 py-4 border border-[#ffde22]/30 rounded-xl text-white hover:border-[#ffde22] transition-all flex items-center gap-2"
+            >
+              <Github className="w-5 h-5" />
+              View on GitHub
+            </a>
+          </div>
+
+          {/* Trust badges */}
+          <div className="flex items-center gap-6 mt-12">
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="w-8 h-8 bg-gradient-to-r from-[#ffde22]/30 to-[#ff8928]/30 rounded-full border-2 border-[#0a0a0a]" />
+                ))}
+              </div>
+              <span className="text-sm text-white/60">10+ universities</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <GitCommit className="w-5 h-5 text-[#ffde22]" />
+              <span className="text-sm text-white/60">10k+ commits analyzed</span>
+            </div>
+          </div>
         </div>
-        
-        {/* Primary Heading: Satoshi Black with Cyber-Academic Gradient */}
-        <h1 className="font-satoshi text-6xl md:text-8xl font-black leading-[0.9] tracking-tighter text-white mb-8">
-          CODE <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent italic">INTELLIGENCE</span><br />
-          FOR RESEARCH SQUADS
-        </h1>
 
-        {/* Supporting Copy: General Sans for readability */}
-        <p className="mx-auto max-w-2xl font-general text-lg leading-relaxed text-white/40 mb-10">
-          DevAI unifies repository analysis, student contribution tracking, and context-aware RAG assistance into one high-performance dashboard[cite: 1, 9, 27].
-        </p>
+        {/* Dashboard Preview */}
+        <div className="relative animate-fadeInRight">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#ffde22]/20 to-[#ff414e]/20 rounded-3xl blur-3xl"></div>
+          <div className="relative bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-3 h-3 bg-rose-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+              <span className="text-sm text-white/60 ml-2">Team Quantum · CS 401 Project</span>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-white/5 rounded-xl">
+                  <div className="flex items-center gap-2 text-[#ffde22] mb-1">
+                    <GitCommit className="w-4 h-4" />
+                    <span className="text-xs font-medium">COMMITS</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">142</p>
+                  <p className="text-xs text-emerald-500">+23 this week</p>
+                </div>
+                <div className="p-4 bg-white/5 rounded-xl">
+                  <div className="flex items-center gap-2 text-[#ff8928] mb-1">
+                    <Users className="w-4 h-4" />
+                    <span className="text-xs font-medium">CONTRIBUTORS</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">4</p>
+                  <p className="text-xs text-white/40">Active members</p>
+                </div>
+              </div>
 
-        {/* Action Buttons: Functional Routing and Interactive Magnetic Effects */}
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          
-          {/* Main Action: Functional Login Routing */}
-          <MagneticButton 
-            onClick={() => router.push('/login')} 
-            className="rounded-2xl bg-primary px-10 py-5 font-satoshi font-black uppercase tracking-widest text-black shadow-[0_0_30px_rgba(255,222,34,0.4)] transition-all hover:scale-105 active:scale-95"
-          >
-            <span className="flex items-center gap-2">
-              Start Analyzing <ArrowRight size={20} />
-            </span>
-          </MagneticButton>
-          
-          {/* Secondary Action: External Repository Link  */}
-          <a 
-            href="https://github.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-10 py-5 font-satoshi font-black uppercase tracking-widest text-white transition-colors hover:bg-white/10 hover:border-white/20"
-          >
-            <Github size={20} /> Repository
-          </a>
+              <div className="p-4 bg-white/5 rounded-xl">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-white/80">Sprint Completion</span>
+                  <span className="text-sm font-bold text-[#ffde22]">78%</span>
+                </div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="w-[78%] h-full bg-gradient-to-r from-[#ffde22] to-[#ff8928] rounded-full animate-pulse" />
+                </div>
+              </div>
+
+              <div className="p-4 bg-gradient-to-r from-[#ffde22]/10 to-[#ff414e]/10 rounded-xl border border-[#ffde22]/20">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-[#ffde22]/20 rounded-lg flex items-center justify-center">
+                    <Brain className="w-4 h-4 text-[#ffde22]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">AI Insight</p>
+                    <p className="text-xs text-white/60 mt-1">
+                      Alice has the highest commit frequency. Consider pairing her with Charlie for knowledge sharing.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Background Depth: Subtle Radial Mask */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0a0a0a_100%)] pointer-events-none" />
     </section>
   );
 }

@@ -1,351 +1,224 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import {
-    AreaChart, Area, BarChart, Bar, LineChart, Line,
-    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend
+  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, TooltipProps
 } from 'recharts';
+import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 
-interface TimelineProps {
-    data: any[];
-    type?: 'bar' | 'area' | 'line';
-    height?: number;
-    color?: string;
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface DataPoint {
+  date: string;
+  commits: number;
+  [key: string]: string | number;
 }
 
-export const AnimatedTimeline = ({ data, type = 'area', height = 200, color = '#ffde22' }: TimelineProps) => {
-    const [animatedData, setAnimatedData] = useState<any[]>([]);
+interface TimelineProps {
+  data?: DataPoint[];
+  type?: 'bar' | 'area' | 'line';
+  height?: number;
+  color?: string;
+  dataKey?: string;
+  label?: string;
+}
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setAnimatedData(data || []);
-        }, 100);
-        return () => clearTimeout(timer);
-    }, [data]);
+interface ContributorData {
+  name: string;
+  commits?: number;
+  value?: number;
+}
 
-    if (!data || data.length === 0) {
-        return (
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: `${height}px`,
-                background: 'rgba(255,222,34,0.05)',
-                borderRadius: '0.75rem'
-            }}>
-                <p style={{ color: '#ffde22' }}>No commit data available</p>
-            </div>
-        );
-    }
+interface ContributorActivityData {
+  name: string;
+  commits: number;
+  activity_score: number;
+}
 
-    const gradientColors = {
-        start: color,
-        end: color + '80'
-    };
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-    const axisStyle = {
-        fontSize: 12,
-        fill: '#ffffff',
-        opacity: 0.6
-    };
+const DEFAULT_TIMELINE_DATA: DataPoint[] = [
+  { date: 'Mon', commits: 12 },
+  { date: 'Tue', commits: 8 },
+  { date: 'Wed', commits: 15 },
+  { date: 'Thu', commits: 10 },
+  { date: 'Fri', commits: 7 },
+  { date: 'Sat', commits: 3 },
+  { date: 'Sun', commits: 5 },
+];
 
-    const tooltipStyle = {
-        backgroundColor: '#1a1a1a',
-        border: '1px solid rgba(255,222,34,0.2)',
-        borderRadius: '0.75rem',
-        padding: '0.75rem',
-        color: '#ffffff'
-    };
+const DEFAULT_CONTRIBUTOR_DATA: ContributorData[] = [
+  { name: 'Alice', value: 65 },
+  { name: 'Bob', value: 42 },
+  { name: 'Charlie', value: 25 },
+];
 
-    if (type === 'bar') {
-        return (
-            <ResponsiveContainer width="100%" height={height}>
-                <BarChart data={animatedData.length ? animatedData : data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis
-                        dataKey="date"
-                        tick={axisStyle}
-                        tickFormatter={(value) => {
-                            try {
-                                const date = new Date(value);
-                                return `${date.getDate()}/${date.getMonth() + 1}`;
-                            } catch {
-                                return value;
-                            }
-                        }}
-                    />
-                    <YAxis tick={axisStyle} />
-                    <Tooltip
-                        contentStyle={tooltipStyle}
-                        itemStyle={{ color: '#ffde22' }}
-                        labelStyle={{ color: '#ffffff', opacity: 0.8 }}
-                    />
-                    <Bar
-                        dataKey="commits"
-                        fill={color}
-                        radius={[4, 4, 0, 0]}
-                        animationBegin={0}
-                        animationDuration={1500}
-                    >
-                        {(animatedData.length ? animatedData : data).map((entry: any, index: number) => (
-                            <Cell
-                                key={`cell-${index}`}
-                                fill={`url(#barGradient-${index})`}
-                            />
-                        ))}
-                    </Bar>
-                    <defs>
-                        {(animatedData.length ? animatedData : data).map((_: any, index: number) => (
-                            <linearGradient key={`grad-${index}`} id={`barGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={gradientColors.start} stopOpacity={1} />
-                                <stop offset="100%" stopColor={gradientColors.end} stopOpacity={0.6} />
-                            </linearGradient>
-                        ))}
-                    </defs>
-                </BarChart>
-            </ResponsiveContainer>
-        );
-    }
+const DEFAULT_ACTIVITY_DATA: ContributorActivityData[] = [
+  { name: 'Alice Chen', commits: 65, activity_score: 98 },
+  { name: 'Bob Smith', commits: 42, activity_score: 76 },
+  { name: 'Charlie Brown', commits: 25, activity_score: 52 },
+];
 
-    if (type === 'line') {
-        return (
-            <ResponsiveContainer width="100%" height={height}>
-                <LineChart data={animatedData.length ? animatedData : data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis
-                        dataKey="date"
-                        tick={axisStyle}
-                        tickFormatter={(value) => {
-                            try {
-                                const date = new Date(value);
-                                return `${date.getDate()}/${date.getMonth() + 1}`;
-                            } catch {
-                                return value;
-                            }
-                        }}
-                    />
-                    <YAxis tick={axisStyle} />
-                    <Tooltip
-                        contentStyle={tooltipStyle}
-                        itemStyle={{ color: '#ffde22' }}
-                        labelStyle={{ color: '#ffffff', opacity: 0.8 }}
-                    />
-                    <Line
-                        type="monotone"
-                        dataKey="commits"
-                        stroke={color}
-                        strokeWidth={3}
-                        dot={{ fill: color, strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, fill: color }}
-                        animationBegin={0}
-                        animationDuration={1500}
-                    />
-                </LineChart>
-            </ResponsiveContainer>
-        );
-    }
+const PIE_COLORS = ['#ffde22', '#ff8928', '#ff414e', '#10b981'];
 
-    // Default: Area chart
-    return (
-        <ResponsiveContainer width="100%" height={height}>
-            <AreaChart data={animatedData.length ? animatedData : data}>
-                <defs>
-                    <linearGradient id="colorCommits" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-                    </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis
-                    dataKey="date"
-                    tick={axisStyle}
-                    tickFormatter={(value) => {
-                        try {
-                            const date = new Date(value);
-                            return `${date.getDate()}/${date.getMonth() + 1}`;
-                        } catch {
-                            return value;
-                        }
-                    }}
-                />
-                <YAxis tick={axisStyle} />
-                <Tooltip
-                    contentStyle={tooltipStyle}
-                    itemStyle={{ color: '#ffde22' }}
-                    labelStyle={{ color: '#ffffff', opacity: 0.8 }}
-                />
-                <Area
-                    type="monotone"
-                    dataKey="commits"
-                    stroke={color}
-                    strokeWidth={2}
-                    fill="url(#colorCommits)"
-                    animationBegin={0}
-                    animationDuration={1500}
-                />
-            </AreaChart>
-        </ResponsiveContainer>
-    );
+// ─── Shared Tooltip ───────────────────────────────────────────────────────────
+
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+  valueLabel = 'commits',
+}: TooltipProps<ValueType, NameType> & { valueLabel?: string }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div
+      style={{
+        background: '#1a1a1a',
+        border: '1px solid #ffde22',
+        borderRadius: 8,
+        padding: '8px 12px',
+      }}
+    >
+      <p style={{ color: '#fff', fontSize: 13, margin: 0 }}>{label}</p>
+      <p style={{ color: '#ffde22', fontSize: 13, fontWeight: 700, margin: '4px 0 0' }}>
+        {payload[0].value} {valueLabel}
+      </p>
+    </div>
+  );
 };
 
-// Contributor Pie Chart
-export const ContributorPieChart = ({ data }: { data: any[] }) => {
-    const COLORS = ['#ffde22', '#ff8928', '#ff414e', '#ffde22', '#ff8928'];
+// ─── AnimatedTimeline ─────────────────────────────────────────────────────────
 
-    if (!data || data.length === 0) {
-        return (
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '250px',
-                background: 'rgba(255,222,34,0.05)',
-                borderRadius: '0.75rem'
-            }}>
-                <p style={{ color: '#ffde22' }}>No contributor data available</p>
-            </div>
-        );
-    }
+export const AnimatedTimeline = ({
+  data,
+  type = 'area',
+  height = 300,
+  color = '#ffde22',
+  dataKey = 'commits',
+  label = 'commits',
+}: TimelineProps) => {
+  const chartData = data && data.length > 0 ? data : DEFAULT_TIMELINE_DATA;
 
-    return (
-        <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-                <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={80}
-                    fill="#ffde22"
-                    dataKey="commits"
-                    animationBegin={0}
-                    animationDuration={1500}
-                >
-                    {data.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                </Pie>
-                <Tooltip
-                    contentStyle={{
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid rgba(255,222,34,0.2)',
-                        borderRadius: '0.75rem',
-                        color: '#ffffff'
-                    }}
-                />
-                <Legend
-                    wrapperStyle={{ color: '#ffffff' }}
-                />
-            </PieChart>
-        </ResponsiveContainer>
-    );
+
+
+  const sharedAxisTooltip = (
+    <>
+      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+      <XAxis dataKey="date" stroke="#666" tick={{ fill: '#fff' }} />
+      <YAxis stroke="#666" tick={{ fill: '#fff' }} />
+      <Tooltip content={<CustomTooltip valueLabel={label} />} />
+    </>
+  );
+
+  return (
+    <div style={{ width: '100%', height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        {type === 'bar' ? (
+          <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            {sharedAxisTooltip}
+            <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        ) : type === 'line' ? (
+          <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            {sharedAxisTooltip}
+            <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false} />
+          </LineChart>
+        ) : (
+          <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={color} stopOpacity={0.1} />
+              </linearGradient>
+            </defs>
+            {sharedAxisTooltip}
+            <Area
+              type="monotone"
+              dataKey={dataKey}
+              stroke={color}
+              strokeWidth={2}
+              fill="url(#colorGrad)"
+            />
+          </AreaChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  );
 };
 
-// Contributor Activity Bar
-export const ContributorActivity = ({ contributors }: { contributors: any[] }) => {
-    if (!contributors || contributors.length === 0) {
-        return (
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '200px',
-                background: 'rgba(255,222,34,0.05)',
-                borderRadius: '0.75rem'
-            }}>
-                <p style={{ color: '#ffde22' }}>No contributor activity</p>
-            </div>
-        );
-    }
+// ─── ContributorPieChart ──────────────────────────────────────────────────────
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {contributors.map((contributor, index) => (
-                <motion.div
-                    key={contributor.name || index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '1rem',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,222,34,0.1)',
-                        borderRadius: '0.75rem'
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            width: '2.5rem',
-                            height: '2.5rem',
-                            borderRadius: '0.75rem',
-                            background: 'linear-gradient(135deg, #ffde22, #ff8928)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#000',
-                            fontWeight: 'bold'
-                        }}>
-                            {contributor.name ? contributor.name[0] : '?'}
-                        </div>
-                        <div>
-                            <p style={{ fontWeight: 600, margin: 0, color: '#ffffff' }}>
-                                {contributor.name || 'Unknown'}
-                            </p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem' }}>
-                                <span style={{
-                                    fontSize: '0.875rem',
-                                    padding: '0.125rem 0.5rem',
-                                    background: 'rgba(255,222,34,0.1)',
-                                    color: '#ffde22',
-                                    borderRadius: '1rem'
-                                }}>
-                                    {contributor.commits || 0} commits
-                                </span>
-                                <span style={{ fontSize: '0.875rem', color: '#ffde22' }}>
-                                    +{contributor.additions || 0}
-                                </span>
-                                <span style={{ fontSize: '0.875rem', color: '#ff414e' }}>
-                                    -{contributor.deletions || 0}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <p style={{ fontSize: '1.125rem', fontWeight: 'bold', margin: 0, color: '#ffde22' }}>
-                                {contributor.activity_score || 0}%
-                            </p>
-                            <p style={{ fontSize: '0.75rem', margin: 0, color: 'rgba(255,255,255,0.4)' }}>
-                                activity
-                            </p>
-                        </div>
-                        <div style={{
-                            width: '5rem',
-                            height: '0.5rem',
-                            background: 'rgba(255,255,255,0.1)',
-                            borderRadius: '1rem',
-                            overflow: 'hidden'
-                        }}>
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${contributor.activity_score || 0}%` }}
-                                transition={{ duration: 1, delay: index * 0.1 }}
-                                style={{
-                                    height: '100%',
-                                    background: 'linear-gradient(90deg, #ffde22, #ff8928)',
-                                    borderRadius: '1rem'
-                                }}
-                            />
-                        </div>
-                    </div>
-                </motion.div>
+export const ContributorPieChart = ({ data }: { data?: ContributorData[] }) => {
+  const chartData = (data && data.length > 0 ? data : DEFAULT_CONTRIBUTOR_DATA).map((item, i) => ({
+    name: item.name ?? `Contributor ${i + 1}`,
+    value: item.commits ?? item.value ?? 0,
+  }));
+
+  return (
+    <div style={{ width: '100%', height: 300 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            outerRadius={100}
+            dataKey="value"
+            label={({ name, value }) => `${name}: ${value}`}
+            labelLine={{ stroke: '#666' }}
+          >
+            {chartData.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
             ))}
+          </Pie>
+          <Tooltip
+            formatter={(value: ValueType, name: NameType) => [value, name]}
+            contentStyle={{
+              background: '#1a1a1a',
+              border: '1px solid #ffde22',
+              borderRadius: 8,
+            }}
+            itemStyle={{ color: '#ffde22' }}
+            labelStyle={{ color: '#fff' }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+// ─── ContributorActivity ──────────────────────────────────────────────────────
+
+export const ContributorActivity = ({
+  contributors,
+}: {
+  contributors?: ContributorActivityData[];
+}) => {
+  const data = contributors && contributors.length > 0 ? contributors : DEFAULT_ACTIVITY_DATA;
+
+  return (
+    <div className="space-y-4">
+      {data.map((c, i) => (
+        <div
+          key={i}
+          className="p-4 bg-white/10 rounded-lg border border-white/20 transition-colors hover:border-[#ffde22]/50"
+        >
+          <div className="flex justify-between mb-2">
+            <span className="font-bold text-white">{c.name}</span>
+            <span className="text-[#ffde22] font-bold tabular-nums">{c.activity_score}%</span>
+          </div>
+          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[#ffde22] to-[#ff8928] rounded-full transition-all duration-700"
+              style={{ width: `${Math.min(Math.max(c.activity_score, 0), 100)}%` }}
+            />
+          </div>
+          <p className="text-sm text-white/60 mt-2">
+            {c.commits.toLocaleString()} commit{c.commits !== 1 ? 's' : ''}
+          </p>
         </div>
-    );
+      ))}
+    </div>
+  );
 };
