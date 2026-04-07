@@ -16,9 +16,9 @@ export default function AnalyticsChart({ data }: { data: any }) {
       active_days: 22
     },
     contributors: [
-      { name: 'Alice Chen', commits: 65, additions: 1240, deletions: 320, activity_score: 98 },
-      { name: 'Bob Smith', commits: 42, additions: 890, deletions: 210, activity_score: 76 },
-      { name: 'Charlie Brown', commits: 25, additions: 450, deletions: 120, activity_score: 52 },
+      { name: 'Tushar More', commits: 65, additions: 1240, deletions: 320, activity_score: 98 },
+      { name: 'Atharva Shirke', commits: 42, additions: 890, deletions: 210, activity_score: 76 },
+      { name: 'Hrishi Mishra', commits: 25, additions: 450, deletions: 120, activity_score: 52 },
     ]
   };
 

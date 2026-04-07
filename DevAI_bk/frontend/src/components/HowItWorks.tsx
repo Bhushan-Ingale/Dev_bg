@@ -31,7 +31,7 @@ export default function HowItWorks() {
   const inView = useInView(ref, { once: true });
 
   return (
-    <section ref={ref} className="max-w-7xl mx-auto px-6 py-24">
+    <section id="how-it-works" ref={ref} className="max-w-7xl mx-auto px-6 py-24">
       <h2 className="text-4xl md:text-5xl font-black font-['Satoshi'] text-center mb-4">
         How It <span className="text-[#ffde22]">Works</span>
       </h2>
@@ -40,9 +40,6 @@ export default function HowItWorks() {
       </p>
 
       <div className="grid md:grid-cols-3 gap-8 relative">
-        {/* Connection Lines */}
-        <div className="hidden md:block absolute top-1/3 left-1/4 w-1/2 h-0.5 bg-gradient-to-r from-[#ffde22] to-[#ff414e] opacity-20" />
-        
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (

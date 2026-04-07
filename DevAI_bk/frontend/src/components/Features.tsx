@@ -12,7 +12,7 @@ const features = [
 
 export default function Features() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
+    <section id="features" className="mx-auto max-w-7xl px-6 py-24">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-12">
         {features.map((f, i) => (
           <motion.div

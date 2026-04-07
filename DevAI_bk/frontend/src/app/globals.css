@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Font Configuration with Fallbacks */
+/* ── Fonts ──────────────────────────────────────────────────────────────── */
+
 @font-face {
   font-family: 'Satoshi';
   src: url('/fonts/Satoshi-Black.woff2') format('woff2');
@@ -17,84 +18,76 @@
   font-display: swap;
 }
 
-/* Font Fallbacks - System fonts if custom fonts fail */
 :root {
-  --font-satoshi: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-general: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-satoshi: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-general: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
 
 @layer base {
   body {
     @apply bg-[#0a0a0a] text-white antialiased;
     font-family: var(--font-general);
   }
-  
-  h1, h2, h3, h4, .font-satoshi {
+
+  /* Only apply satoshi/uppercase/italic to elements that explicitly opt in */
+  .font-satoshi {
     font-family: var(--font-satoshi) !important;
-    @apply tracking-tighter uppercase italic;
   }
+
+  /*
+   * IMPORTANT: h1-h4 inside dashboards should NOT be uppercase/italic
+   * — that's reserved for landing page hero text only.
+   * Use .font-satoshi class explicitly where you want it.
+   */
 }
 
+/* ── Utilities ───────────────────────────────────────────────────────────── */
+
 @layer utilities {
-  /* Premium Noise Overlay */
   .noise-overlay {
     @apply fixed inset-0 z-[9999] pointer-events-none opacity-[0.04];
     background-image: url('/noise.png');
     mix-blend-mode: soft-light;
   }
-  
-  /* Custom Scrollbar for 2026 Aesthetic */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    @apply bg-white/10 rounded-full hover:bg-[#ffde22]/40 transition-colors;
+    @apply bg-white/10 rounded-full;
+    transition: background 0.2s;
   }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 222, 34, 0.35); }
 }
 
-/* Ensure charts have proper dimensions */
-.recharts-wrapper {
-  width: 100% !important;
-  height: 100% !important;
-}
+/* ── Recharts ─────────────────────────────────────────────────────────────
+ *
+ * KEY RULES — do NOT add min-height here; charts own their height via
+ * their wrapper div (explicit px). Only neutralise things that fight rendering.
+ *
+ * ───────────────────────────────────────────────────────────────────────── */
 
-.recharts-surface {
-  overflow: visible;
-}
-/* Force chart containers to be visible */
-.recharts-wrapper {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 300px !important;
-  background-color: transparent !important;
-}
-
+/* Let recharts surface clip properly inside its container */
 .recharts-surface {
   overflow: visible;
 }
 
-.recharts-cartesian-grid line {
-  stroke: #333333 !important;
-}
-
-.recharts-text {
-  fill: #ffffff !important;
-  font-size: 12px !important;
-}
-
+/* Tooltip above everything */
 .recharts-tooltip-wrapper {
-  z-index: 1000 !important;
+  z-index: 100 !important;
 }
 
-/* Ensure charts are visible */
-.bg-gradient-to-br {
-  background: linear-gradient(135deg, rgba(255,222,34,0.1), rgba(255,137,40,0.05)) !important;
+/* Axis tick text — use rgba not forced #fff so our custom fills still work */
+.recharts-cartesian-axis-tick-value {
+  fill: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
 }
 
-/* Force dark backgrounds for chart containers */
-[class*="bg-white/"] {
-  background-color: rgba(255, 255, 255, 0.05) !important;
+/* Grid lines */
+.recharts-cartesian-grid-horizontal line {
+  stroke: rgba(255, 255, 255, 0.06);
+}
+.recharts-cartesian-grid-vertical line {
+  display: none;
 }

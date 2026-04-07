@@ -11,6 +11,7 @@ import Stats from '@/components/Stats';
 import Testimonials from '@/components/Testimonials';
 import CTA from '@/components/CTA';
 import Footer from '@/components/Footer';
+import { RetroGrid } from '@/components/magicui/retro-grid';
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
@@ -22,17 +23,11 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    // CRITICAL FIX: Only redirect on MANUAL login, never automatically
-    // We check if user exists AND we have a real user session
-    // But we want landing page to ALWAYS show first
-    if (mounted && !loading) {
-      // We don't auto-redirect even if user exists
-      // User must explicitly go to login page
-      console.log('Landing page loaded - no auto redirect');
+    if (mounted && !loading && user) {
+      console.log('User already logged in, but staying on landing page');
     }
   }, [user, loading, mounted, router]);
 
-  // Show loading while checking auth (brief moment)
   if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -41,17 +36,29 @@ export default function LandingPage() {
     );
   }
 
-  // ALWAYS show landing page - NO AUTO REDIRECT
   return (
-    <main className="bg-[#0a0a0a] min-h-screen">
-      <Navbar />
-      <Hero />
-      <Stats />
-      <Features />
-      <HowItWorks />
-      <Testimonials />
-      <CTA />
-      <Footer />
+    <main className="bg-[#0a0a0a] min-h-screen relative overflow-hidden">
+      {/* Retro Grid Background */}
+      <RetroGrid 
+        angle={45}
+        cellSize={50}
+        opacity={0.15}
+        lightLineColor="#ffde22"
+        darkLineColor="#ff8928"
+        className="z-0"
+      />
+      
+      {/* Content - ensure it's above the grid */}
+      <div className="relative z-10">
+        <Navbar />
+        <Hero />
+        <Stats />
+        <Features />
+        <HowItWorks />
+        <Testimonials />
+        <CTA />
+        <Footer />
+      </div>
     </main>
   );
 }

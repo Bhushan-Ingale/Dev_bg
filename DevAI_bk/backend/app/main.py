@@ -156,3 +156,11 @@ async def create_event(event: dict):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+# ── DELETE team (add this to existing main.py) ────────────────────────────────
+@app.delete("/api/teams/{team_id}")
+async def delete_team(team_id: str):
+    """Delete a team"""
+    if team_id not in teams_db:
+        raise HTTPException(status_code=404, detail="Team not found")
+    del teams_db[team_id]
+    return {"message": "Team deleted successfully"}

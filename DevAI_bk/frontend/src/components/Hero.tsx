@@ -114,7 +114,7 @@ export default function Hero() {
                   <div>
                     <p className="text-sm font-medium text-white">AI Insight</p>
                     <p className="text-xs text-white/60 mt-1">
-                      Alice has the highest commit frequency. Consider pairing her with Charlie for knowledge sharing.
+                      Pranit has the highest commit frequency. Consider pairing her with Sahil for knowledge sharing.
                     </p>
                   </div>
                 </div>
