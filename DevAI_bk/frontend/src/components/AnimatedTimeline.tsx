@@ -65,9 +65,9 @@ const DEFAULT_TIMELINE: DataPoint[] = [
 ];
 
 const DEFAULT_CONTRIBUTORS: ContributorData[] = [
-  { name: 'Alice Chen',    commits: 65, additions: 1240, deletions: 320, activity_score: 98 },
-  { name: 'Bob Smith',     commits: 42, additions: 890,  deletions: 210, activity_score: 76 },
-  { name: 'Charlie Brown', commits: 25, additions: 450,  deletions: 120, activity_score: 52 },
+  { name: 'Hrishi Shinde',    commits: 65, additions: 1240, deletions: 320, activity_score: 98 },
+  { name: 'Sahil Mane',     commits: 42, additions: 890,  deletions: 210, activity_score: 76 },
+  { name: 'Rohan Kale', commits: 25, additions: 450,  deletions: 120, activity_score: 52 },
 ];
 
 // ─── Shared tooltip ───────────────────────────────────────────────────────────
