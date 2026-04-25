@@ -1,75 +1,50 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, GraduationCap, Users, ArrowRight, Eye, EyeOff, ChevronLeft } from 'lucide-react';
+/**
+ * login/page.tsx — DevAI Login Page
+ * Drop at:  frontend/src/app/login/page.tsx
+ *
+ * Key change from old version:
+ *   OLD: login(email, role)           ← local-only, no password
+ *   NEW: login(email, password, role) ← hits real backend, falls back to demo
+ */
 
-// The same DevAI logo used in the Navbar — a code icon, not a Terminal square
-const DevAIBrand = () => (
-  <div className="flex flex-col items-center gap-3 mb-8">
-    <div className="w-16 h-16 bg-gradient-to-br from-[#ffde22] to-[#ff8928] rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(255,222,34,0.4)]">
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-        <path d="M7 8L3 12L7 16" stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M17 8L21 12L17 16" stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M14 4L10 20" stroke="black" strokeWidth="2.2" strokeLinecap="round"/>
-      </svg>
-    </div>
-    <div className="text-center">
-      <h1 className="text-3xl font-black text-white tracking-tight">DevAI</h1>
-      <p className="text-xs text-[#ffde22]/70 font-medium uppercase tracking-widest mt-0.5">
-        Academic Project Analytics
-      </p>
-    </div>
-  </div>
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Eye, EyeOff, ArrowLeft, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+
+const DevAILogo = () => (
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <rect width="28" height="28" rx="8" fill="black" />
+    <path d="M8 10L4 14L8 18" stroke="#ffde22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M20 10L24 14L20 18" stroke="#ff8928" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M16 8L12 20" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
 );
 
-// Quick-fill role button
-function RolePill({
-  icon: Icon, label, email, color, onClick, active,
-}: {
-  icon: React.ElementType; label: string; email: string; color: string;
-  onClick: () => void; active: boolean;
-}) {
-  return (
-    <button type="button" onClick={onClick}
-      className="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border transition-all text-left"
-      style={{
-        backgroundColor: active ? `${color}15` : 'rgba(255,255,255,0.03)',
-        borderColor: active ? `${color}50` : 'rgba(255,255,255,0.08)',
-      }}>
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: `${color}22` }}>
-        <Icon size={14} style={{ color }} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-bold" style={{ color: active ? color : 'rgba(255,255,255,0.6)' }}>{label}</p>
-        <p className="text-[10px] text-white/30 font-mono truncate">{email}</p>
-      </div>
-    </button>
-  );
-}
+const DEMO_PILLS = [
+  { label: 'Demo Guide',   email: 'guide@123',   password: 'anything123', role: 'guide'   as const },
+  { label: 'Demo Student', email: 'student@123', password: 'anything123', role: 'student' as const },
+];
 
 export default function LoginPage() {
-  const [email, setEmail]         = useState('');
-  const [password, setPassword]   = useState('');
-  const [showPass, setShowPass]   = useState(false);
-  const [error, setError]         = useState('');
-  const [loading, setLoading]     = useState(false);
-  const { login, user, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const router     = useRouter();
+  const { login }  = useAuth();
 
-  // Redirect if already logged in
-  useEffect(() => {
-    if (!authLoading && user) {
-      router.push(user.role === 'guide' ? '/dashboard/guide' : '/dashboard/student');
-    }
-  }, [user, authLoading, router]);
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [role,     setRole]     = useState<'guide' | 'student'>('student');
+  const [showPw,   setShowPw]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
 
-  const fillRole = (role: 'guide' | 'student') => {
-    setEmail(role === 'guide' ? 'guide@123' : 'student@123');
-    setPassword('anything123');
+  const fillDemo = (pill: typeof DEMO_PILLS[number]) => {
+    setEmail(pill.email);
+    setPassword(pill.password);
+    setRole(pill.role);
     setError('');
   };
 
@@ -78,150 +53,144 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    // Small artificial delay so the spinner shows (feels less instant/fake)
-    await new Promise(r => setTimeout(r, 350));
+    // ← password is now the second argument
+    const ok = await login(email.trim(), password, role);
 
-    if (password !== 'anything123') {
-      setError('Invalid password. Use: anything123');
-      setLoading(false);
-      return;
-    }
-
-    let role = '';
-    if (email === 'guide@123')   role = 'guide';
-    else if (email === 'student@123') role = 'student';
-    else {
-      setError('Unknown Squad ID. Use guide@123 or student@123');
-      setLoading(false);
-      return;
-    }
-
-    const ok = login(email, role);
+    setLoading(false);
     if (ok) {
       router.push(role === 'guide' ? '/dashboard/guide' : '/dashboard/student');
     } else {
-      setError('Login failed — please try again.');
+      setError('Invalid credentials. Use the demo pills above, or check the backend is running.');
     }
-    setLoading(false);
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-10 h-10 border-3 border-[#ffde22]/20 border-t-[#ffde22] rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      {/* Top bar with back-to-home — always visible */}
-      <div className="w-full px-6 py-5 flex items-center justify-between flex-shrink-0">
-        <button onClick={() => router.push('/')}
-          className="flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors group">
-          <ChevronLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+      {/* ← Back bar */}
+      <div className="border-b border-white/5 px-6 py-3">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors">
+          <ArrowLeft size={14} />
           Back to Home
-        </button>
-        <span className="text-xs text-white/20 font-medium">Demo Access</span>
+        </Link>
       </div>
 
-      {/* Center form */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-12">
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
           className="w-full max-w-md"
         >
-          {/* Card */}
-          <div className="bg-[#0f0f0f] border border-white/8 rounded-3xl p-8 md:p-10 shadow-2xl">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-8">
+            <DevAILogo />
+            <div>
+              <h1 className="text-2xl font-bold text-white">DevAI</h1>
+              <p className="text-sm text-white/40">Academic project analytics</p>
+            </div>
+          </div>
 
-            <DevAIBrand />
+          <div className="bg-white/5 rounded-2xl border border-white/10 p-8">
+            <h2 className="text-lg font-semibold text-white mb-1">Sign in</h2>
+            <p className="text-sm text-white/40 mb-6">Use demo pills or your own credentials</p>
 
-            {/* Role quick-fill */}
-            <div className="mb-6">
-              <p className="text-xs text-white/35 font-medium mb-3 text-center">Quick fill — select your role</p>
-              <div className="flex gap-3">
-                <RolePill
-                  icon={GraduationCap} label="Guide / Prof" email="guide@123" color="#ffde22"
-                  active={email === 'guide@123'} onClick={() => fillRole('guide')} />
-                <RolePill
-                  icon={Users} label="Student" email="student@123" color="#ff8928"
-                  active={email === 'student@123'} onClick={() => fillRole('student')} />
-              </div>
+            {/* Quick-fill pills */}
+            <div className="flex gap-2 mb-6">
+              {DEMO_PILLS.map(pill => (
+                <button
+                  key={pill.role}
+                  type="button"
+                  onClick={() => fillDemo(pill)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    role === pill.role && email === pill.email
+                      ? 'bg-[#ffde22] text-black border-[#ffde22]'
+                      : 'bg-white/5 text-white/60 border-white/10 hover:border-[#ffde22]/40 hover:text-white'
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              ))}
             </div>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex-1 h-px bg-white/8" />
-              <span className="text-xs text-white/25"></span>
-              <div className="flex-1 h-px bg-white/8" />
-            </div>
-
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Squad ID */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-white/50 uppercase tracking-widest block">Squad ID</label>
+              {/* Role */}
+              <div>
+                <label className="block text-xs text-white/40 mb-1.5 uppercase tracking-wider">Role</label>
+                <div className="flex gap-2">
+                  {(['guide', 'student'] as const).map(r => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all border ${
+                        role === r
+                          ? 'bg-[#ffde22]/20 text-[#ffde22] border-[#ffde22]/40'
+                          : 'bg-white/5 text-white/50 border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-xs text-white/40 mb-1.5 uppercase tracking-wider">Email</label>
                 <input
                   type="text"
                   value={email}
-                  onChange={e => { setEmail(e.target.value); setError(''); }}
-                  placeholder="guide@123  or  student@123"
-                  autoComplete="username"
-                  className="w-full bg-white/5 border border-white/8 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#ffde22]/50 transition-colors placeholder-white/20"
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="guide@123"
                   required
+                  className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/25 outline-none focus:border-[#ffde22]/50 transition-colors"
                 />
               </div>
 
               {/* Password */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-white/50 uppercase tracking-widest block">Password</label>
+              <div>
+                <label className="block text-xs text-white/40 mb-1.5 uppercase tracking-wider">Password</label>
                 <div className="relative">
                   <input
-                    type={showPass ? 'text' : 'password'}
+                    type={showPw ? 'text' : 'password'}
                     value={password}
-                    onChange={e => { setPassword(e.target.value); setError(''); }}
+                    onChange={e => setPassword(e.target.value)}
                     placeholder="anything123"
-                    autoComplete="current-password"
-                    className="w-full bg-white/5 border border-white/8 rounded-xl px-4 py-3.5 pr-11 text-white text-sm outline-none focus:border-[#ffde22]/50 transition-colors placeholder-white/20"
                     required
+                    className="w-full px-4 py-2.5 pr-10 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/25 outline-none focus:border-[#ffde22]/50 transition-colors"
                   />
-                  <button type="button" onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
-                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  >
+                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
 
               {/* Error */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#ff414e]/10 border border-[#ff414e]/25 text-[#ff414e] text-sm"
-                  >
-                    <ShieldAlert size={15} className="flex-shrink-0" />
-                    {error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {error && (
+                <p className="text-sm text-[#ff414e] bg-[#ff414e]/10 border border-[#ff414e]/20 rounded-lg px-4 py-2.5">
+                  {error}
+                </p>
+              )}
 
               {/* Submit */}
-              <button type="submit" disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-[#ffde22] to-[#ff8928] text-black rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_0_24px_rgba(255,222,34,0.3)] mt-2">
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                ) : (
-                  <>Initialize Session <ArrowRight size={16} /></>
-                )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-[#ffde22] to-[#ff8928] text-black font-semibold rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading
+                  ? <><Loader2 size={16} className="animate-spin" /> Signing in…</>
+                  : 'Sign in'}
               </button>
             </form>
 
-            {/* Hint */}
-
+            <p className="text-center text-xs text-white/30 mt-6">
+              No account?{' '}
+              <Link href="/signup" className="text-[#ffde22] hover:underline">Sign up</Link>
+            </p>
           </div>
         </motion.div>
       </div>

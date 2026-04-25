@@ -1,49 +1,87 @@
 /**
- * DevAI API Service
- * Centralized layer for all backend communication.
- * Falls back to mock data gracefully if backend is unreachable.
+ * api.ts — DevAI centralized API layer
+ *
+ * Drop at:  frontend/src/lib/api.ts
+ *
+ * Every public function:
+ *   1. Calls the real FastAPI backend with a JWT Bearer token
+ *   2. Falls back to deterministic mock data if the backend is unreachable
+ *   3. Never throws — the UI always gets usable data
+ *
+ * JWT flow:
+ *   - apiLogin()  → stores token in localStorage under TOKEN_KEY
+ *   - apiFetch()  → reads token and adds  Authorization: Bearer <token>
+ *   - clearAuth() → removes token + user (called by AuthContext on logout)
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+
+export const TOKEN_KEY = 'devai_token';
+export const USER_KEY  = 'devai_user';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface User {
+  id?: string;
+  email: string;
+  role: 'guide' | 'student';
+  name: string;
+  loggedInAt?: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
 
 export interface Team {
   id: string;
   name: string;
   members: string[];
   leader?: string;
-  repo_url?: string;
-  created_at?: string;
-  // Analytics fields (populated by fetchTeamAnalytics)
+  repoUrl?: string;
+  repos?: RepoEntry[];
   progress?: number;
   commits?: number;
-  additions?: number;
-  deletions?: number;
-  lastActive?: string;
-  repoUrl?: string;
-  tech?: string[];
-  activityScore?: number;
-  sprintVelocity?: number;
-  coverage?: number;
   openPRs?: number;
   issues?: number;
+  activityScore?: number;
+  coverage?: number;
 }
 
-export interface Contributor {
+export interface RepoEntry {
+  url: string;
+  name?: string;
+  primary?: boolean;
+}
+
+export interface TeamCreatePayload {
   name: string;
-  commits: number;
-  additions: number;
-  deletions: number;
-  activity_score: number;
+  members: string[];
+  leader?: string;
+  repoUrl?: string;
 }
 
-export interface TimelinePoint {
+export interface DataPoint {
   date: string;
   commits: number;
+  [key: string]: string | number;
+}
+
+export interface ContributorData {
+  name: string;
+  commits?: number;
+  value?: number;
+  additions?: number;
+  deletions?: number;
+  activity_score?: number;
 }
 
 export interface Analytics {
+  team_id: string;
   summary: {
     total_commits: number;
     total_contributors: number;
@@ -51,235 +89,420 @@ export interface Analytics {
     total_deletions: number;
     active_days: number;
   };
-  contributors: Contributor[];
-  timeline: TimelinePoint[];
+  timeline: DataPoint[];
+  contributors: ContributorData[];
+  ai_insights?: string[];
+  cached_at?: string;
 }
 
 export interface Task {
-  id?: string;
+  id: string;
   title: string;
   description?: string;
-  status: 'todo' | 'in_progress' | 'done';
-  team_id?: string;
+  status: 'todo' | 'in_progress' | 'review' | 'done';
+  priority: 'low' | 'medium' | 'high';
   assignee?: string;
+  team_id?: string;
+  due_date?: string;
   created_at?: string;
 }
 
 export interface CalendarEvent {
-  id?: string;
+  id: string;
   title: string;
   date: string;
-  type?: string;
+  type: 'sprint' | 'deadline' | 'review' | 'milestone' | 'meeting';
+  description?: string;
   team_id?: string;
 }
 
-// ─── Core fetch helper ────────────────────────────────────────────────────────
+// ─── Token helpers (exported so AuthContext can use them) ─────────────────────
 
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || `HTTP ${res.status}`);
-  }
-  return res.json();
+export const getToken = (): string | null => {
+  try { return localStorage.getItem(TOKEN_KEY); }
+  catch { return null; }
+};
+
+export const setToken = (token: string): void => {
+  try { localStorage.setItem(TOKEN_KEY, token); }
+  catch {}
+};
+
+export const clearAuth = (): void => {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch {}
+};
+
+// ─── Core fetch wrapper ───────────────────────────────────────────────────────
+
+interface FetchOptions extends RequestInit {
+  skipAuth?: boolean;
 }
 
-// ─── Mock data fallbacks ──────────────────────────────────────────────────────
+async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
+  const { skipAuth = false, headers: extraHeaders, ...rest } = options;
 
-const MOCK_TEAMS: Team[] = [
-  {
-    id: '1',
-    name: 'Team Quantum',
-    members: ['Alice Chen', 'Bob Smith', 'Charlie Brown'],
-    leader: 'Alice Chen',
-    repo_url: 'https://github.com/team/quantum',
-    progress: 85, commits: 65, additions: 1240, deletions: 320,
-    lastActive: '2h ago', repoUrl: 'https://github.com/team/quantum',
-    tech: ['React', 'Node.js', 'MongoDB'],
-    activityScore: 98, sprintVelocity: 42, coverage: 78, openPRs: 3, issues: 5,
-  },
-  {
-    id: '2',
-    name: 'Team Nebula',
-    members: ['Diana Prince', 'Eve Torres', 'Frank Castle'],
-    leader: 'Diana Prince',
-    repo_url: 'https://github.com/team/nebula',
-    progress: 72, commits: 42, additions: 890, deletions: 210,
-    lastActive: '5h ago', repoUrl: 'https://github.com/team/nebula',
-    tech: ['Python', 'FastAPI', 'PostgreSQL'],
-    activityScore: 76, sprintVelocity: 34, coverage: 82, openPRs: 5, issues: 2,
-  },
-  {
-    id: '3',
-    name: 'Team Phoenix',
-    members: ['Grace Hopper', 'Henry Ford', 'Ivy Chen'],
-    leader: 'Grace Hopper',
-    repo_url: 'https://github.com/team/phoenix',
-    progress: 45, commits: 25, additions: 450, deletions: 120,
-    lastActive: '1d ago', repoUrl: 'https://github.com/team/phoenix',
-    tech: ['Vue.js', 'Flask', 'SQLite'],
-    activityScore: 52, sprintVelocity: 18, coverage: 45, openPRs: 7, issues: 8,
-  },
-];
-
-function buildMockAnalytics(team: Team): Analytics {
-  const members = team.members || ['Alice', 'Bob', 'Charlie'];
-  return {
-    summary: {
-      total_commits: team.commits || 65,
-      total_contributors: members.length,
-      total_additions: team.additions || 1240,
-      total_deletions: team.deletions || 320,
-      active_days: 22,
-    },
-    contributors: members.map((name, i) => ({
-      name,
-      commits: [65, 42, 25][i] ?? 10,
-      additions: [1240, 890, 450][i] ?? 100,
-      deletions: [320, 210, 120][i] ?? 50,
-      activity_score: [98, 76, 52][i] ?? 40,
-    })),
-    timeline: Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
-      commits: Math.floor(Math.random() * 12) + 3,
-    })),
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(extraHeaders as Record<string, string> ?? {}),
   };
+
+  if (!skipAuth) {
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${BASE_URL}${path}`, { ...rest, headers });
+
+  if (response.status === 401) {
+    clearAuth();
+    throw new Error('UNAUTHORIZED');
+  }
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`API ${response.status}: ${body}`);
+  }
+
+  return response.json() as Promise<T>;
 }
 
-// ─── Teams API ────────────────────────────────────────────────────────────────
+// ─── Auth ─────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch all teams from backend. Falls back to mock data if backend is down.
- * Backend teams are merged with UI-only fields so the frontend shape is consistent.
+ * Primary login — hits the real backend first, falls back to demo credentials.
+ * On success, stores JWT in localStorage so apiFetch() picks it up automatically.
  */
+export async function apiLogin(
+  email: string,
+  password: string,
+  role: 'guide' | 'student',
+): Promise<LoginResponse> {
+  try {
+    const data = await apiFetch<LoginResponse>('/api/auth/login', {
+      method: 'POST',
+      skipAuth: true,
+      body: JSON.stringify({ email, password, role }),
+    });
+    // Persist token immediately so all subsequent calls are authenticated
+    setToken(data.access_token);
+    return data;
+  } catch (err) {
+    if ((err as Error).message === 'UNAUTHORIZED') throw err; // bad credentials — don't swallow
+    // Backend unreachable → demo mode
+    return mockLogin(email, password, role);
+  }
+}
+
+export async function fetchCurrentUser(): Promise<User> {
+  return apiFetch<User>('/api/auth/me');
+}
+
+// ─── Teams ────────────────────────────────────────────────────────────────────
+
 export async function fetchTeams(): Promise<Team[]> {
   try {
-    const raw = await apiFetch<any[]>('/api/teams');
-    // Merge backend data with UI-friendly defaults
-    return raw.map((t, i) => ({
-      ...MOCK_TEAMS[i % MOCK_TEAMS.length], // grab UI defaults for fields backend doesn't have
-      ...t,
-      // Normalise field names (backend uses snake_case)
-      repoUrl: t.repo_url ?? t.repoUrl,
-      lastActive: t.last_active ?? '—',
-    }));
+    return await apiFetch<Team[]>('/api/teams');
   } catch {
-    console.warn('[DevAI] Backend unreachable — using mock teams');
     return MOCK_TEAMS;
   }
 }
 
-/** Create a new team on the backend, returns the created team with id. */
-export async function createTeam(data: {
-  name: string;
-  members: string[];
-  leader?: string;
-  repoUrl?: string;
-}): Promise<Team> {
+export async function fetchTeam(id: string): Promise<Team> {
   try {
-    const payload = { name: data.name, members: data.members, leader: data.leader, repo_url: data.repoUrl };
-    const result = await apiFetch<{ id: string; message: string }>('/api/teams', {
+    return await apiFetch<Team>(`/api/teams/${id}`);
+  } catch {
+    return MOCK_TEAMS.find(t => t.id === id) ?? MOCK_TEAMS[0];
+  }
+}
+
+export async function createTeam(payload: TeamCreatePayload): Promise<Team> {
+  try {
+    return await apiFetch<Team>('/api/teams', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    // Return a full Team object merging what we sent with what we got back
+  } catch {
     return {
-      id: result.id,
-      name: data.name,
-      members: data.members,
-      leader: data.leader,
-      repoUrl: data.repoUrl,
-      progress: 0, commits: 0, additions: 0, deletions: 0,
-      lastActive: 'Just now', tech: [], activityScore: 0,
-      sprintVelocity: 0, coverage: 0, openPRs: 0, issues: 0,
-    };
-  } catch (err) {
-    // Offline mode: create with a local id
-    console.warn('[DevAI] createTeam failed — using local id');
-    return {
-      id: `local_${Date.now()}`,
-      name: data.name,
-      members: data.members,
-      leader: data.leader,
-      repoUrl: data.repoUrl,
-      progress: 0, commits: 0, additions: 0, deletions: 0,
-      lastActive: 'Just now', tech: [], activityScore: 0,
-      sprintVelocity: 0, coverage: 0, openPRs: 0, issues: 0,
+      id: `mock-${Date.now()}`,
+      ...payload,
+      progress: 0, commits: 0, openPRs: 0, issues: 0, activityScore: 0,
     };
   }
 }
 
-/** Delete a team by id. */
-export async function deleteTeam(teamId: string): Promise<void> {
+export async function updateTeam(id: string, payload: Partial<Team>): Promise<Team> {
   try {
-    await apiFetch(`/api/teams/${teamId}`, { method: 'DELETE' });
+    return await apiFetch<Team>(`/api/teams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
   } catch {
-    // Soft fail — the UI will remove it anyway from local state
-    console.warn('[DevAI] deleteTeam failed silently');
+    return { id, ...payload } as Team;
   }
 }
 
-// ─── Analytics API ────────────────────────────────────────────────────────────
-
-/**
- * Fetch analytics for a specific team.
- * Returns real GitHub data if available, mock data otherwise.
- */
-export async function fetchTeamAnalytics(teamId: string, teams: Team[]): Promise<Analytics> {
+export async function deleteTeam(id: string): Promise<void> {
   try {
-    const data = await apiFetch<Analytics>(`/api/teams/${teamId}/analytics`);
-    return data;
+    await apiFetch<void>(`/api/teams/${id}`, { method: 'DELETE' });
   } catch {
-    console.warn(`[DevAI] Analytics for team ${teamId} — using mock data`);
-    const team = teams.find(t => t.id === teamId) ?? MOCK_TEAMS[0];
-    return buildMockAnalytics(team);
+    // Silently succeed — caller removes from local state
   }
 }
 
-// ─── Tasks API (Kanban) ───────────────────────────────────────────────────────
+// ─── Analytics ────────────────────────────────────────────────────────────────
 
-export async function fetchTasks(teamId?: string): Promise<Task[]> {
+export async function fetchTeamAnalytics(
+  teamId: string,
+  allTeams: Team[] = [],
+  forceRefresh = false,
+): Promise<Analytics> {
   try {
-    const qs = teamId ? `?team_id=${teamId}` : '';
-    return await apiFetch<Task[]>(`/api/tasks${qs}`);
+    const qs = forceRefresh ? '?refresh=true' : '';
+    return await apiFetch<Analytics>(`/api/teams/${teamId}/analytics${qs}`);
   } catch {
-    return [];
+    return generateMockAnalytics(teamId, allTeams);
   }
 }
 
-export async function createTask(task: Omit<Task, 'id'>): Promise<Task> {
-  return apiFetch<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(task) });
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+export async function fetchTasks(teamId?: string, status?: string): Promise<Task[]> {
+  try {
+    const params = new URLSearchParams();
+    if (teamId) params.set('team_id', teamId);
+    if (status)  params.set('status', status);
+    const qs = params.toString();
+    return await apiFetch<Task[]>(`/api/tasks${qs ? `?${qs}` : ''}`);
+  } catch {
+    return MOCK_TASKS.filter(t => !teamId || t.team_id === teamId);
+  }
 }
 
-export async function updateTask(taskId: string, update: Partial<Task>): Promise<Task> {
-  return apiFetch<Task>(`/api/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(update) });
+export async function createTask(payload: Omit<Task, 'id'>): Promise<Task> {
+  try {
+    return await apiFetch<Task>('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { id: `mock-${Date.now()}`, ...payload };
+  }
 }
 
-// ─── Calendar API ─────────────────────────────────────────────────────────────
+export async function updateTask(id: string, payload: Partial<Task>): Promise<Task> {
+  try {
+    return await apiFetch<Task>(`/api/tasks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { id, ...payload } as Task;
+  }
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  try {
+    await apiFetch<void>(`/api/tasks/${id}`, { method: 'DELETE' });
+  } catch {}
+}
+
+// ─── Events ───────────────────────────────────────────────────────────────────
 
 export async function fetchEvents(teamId?: string): Promise<CalendarEvent[]> {
   try {
     const qs = teamId ? `?team_id=${teamId}` : '';
     return await apiFetch<CalendarEvent[]>(`/api/events${qs}`);
   } catch {
-    return [];
+    return MOCK_EVENTS;
   }
 }
 
-export async function createEvent(event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
-  return apiFetch<CalendarEvent>('/api/events', { method: 'POST', body: JSON.stringify(event) });
+export async function createEvent(payload: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
+  try {
+    return await apiFetch<CalendarEvent>('/api/events', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { id: `mock-${Date.now()}`, ...payload };
+  }
 }
 
-// ─── Health check ─────────────────────────────────────────────────────────────
+export async function updateEvent(id: string, payload: Partial<CalendarEvent>): Promise<CalendarEvent> {
+  try {
+    return await apiFetch<CalendarEvent>(`/api/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { id, ...payload } as CalendarEvent;
+  }
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  try {
+    await apiFetch<void>(`/api/events/${id}`, { method: 'DELETE' });
+  } catch {}
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+export async function sendChatMessage(
+  message: string,
+  teamId?: string,
+): Promise<{ response: string; sources?: string[] }> {
+  try {
+    return await apiFetch('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, team_id: teamId }),
+    });
+  } catch {
+    return {
+      response: `DevAI (offline): "${message}" — Running in mock mode. Connect the backend for real AI responses.`,
+    };
+  }
+}
+
+// ─── Health ───────────────────────────────────────────────────────────────────
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    await apiFetch('/health');
-    return true;
+    const res = await fetch(`${BASE_URL}/health`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    return res.ok;
   } catch {
     return false;
   }
 }
+
+// ─── Mock login ───────────────────────────────────────────────────────────────
+
+const DEMO_CREDS: Record<string, { role: 'guide' | 'student'; name: string }> = {
+  'guide@123':   { role: 'guide',   name: 'Guide' },
+  'student@123': { role: 'student', name: 'Student' },
+};
+
+function mockLogin(email: string, _password: string, role: 'guide' | 'student'): LoginResponse {
+  const cred = DEMO_CREDS[email];
+  if (!cred || cred.role !== role) throw new Error('Invalid credentials');
+
+  const token = `mock-jwt-${email}-${Date.now()}`;
+  setToken(token); // store even for mock so subsequent calls carry it
+
+  return {
+    access_token: token,
+    token_type: 'bearer',
+    user: {
+      email,
+      role: cred.role,
+      name: cred.name,
+      loggedInAt: new Date().toISOString(),
+    },
+  };
+}
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
+export const MOCK_TEAMS: Team[] = [
+  {
+    id: 'team-1',
+    name: 'Team Quantum',
+    members: ['Priya Sharma', 'Rahul Verma', 'Arjun Patel'],
+    leader: 'Priya Sharma',
+    repoUrl: 'https://github.com/example/team-quantum',
+    progress: 78, commits: 342, openPRs: 5, issues: 12, activityScore: 92, coverage: 84,
+  },
+  {
+    id: 'team-2',
+    name: 'Team Nebula',
+    members: ['Ananya Singh', 'Kavya Nair', 'Rohit Mehta'],
+    leader: 'Ananya Singh',
+    repoUrl: 'https://github.com/example/team-nebula',
+    progress: 63, commits: 218, openPRs: 3, issues: 8, activityScore: 75, coverage: 71,
+  },
+  {
+    id: 'team-3',
+    name: 'Team Phoenix',
+    members: ['Sneha Reddy', 'Vikram Iyer', 'Pooja Gupta'],
+    leader: 'Sneha Reddy',
+    repoUrl: 'https://github.com/example/team-phoenix',
+    progress: 45, commits: 156, openPRs: 7, issues: 15, activityScore: 61, coverage: 58,
+  },
+];
+
+function seededRng(seed: number) {
+  // Simple LCG so mock numbers are stable per teamId, not random on every call
+  let s = seed;
+  return (min: number, max: number) => {
+    s = (s * 9301 + 49297) % 233280;
+    return min + Math.floor((s / 233280) * (max - min));
+  };
+}
+
+function generateMockAnalytics(teamId: string, allTeams: Team[]): Analytics {
+  const team = allTeams.find(t => t.id === teamId) ?? MOCK_TEAMS[0];
+  const rnd  = seededRng(teamId.charCodeAt(teamId.length - 1));
+
+  const days  = 30;
+  const today = new Date();
+  const timeline: DataPoint[] = Array.from({ length: days }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (days - 1 - i));
+    return {
+      date: d.toISOString().slice(0, 10),
+      commits: Math.max(0, rnd(0, 18) + (i > 20 ? 4 : 0)),
+    };
+  });
+
+  const names  = team.members.length ? team.members : ['Priya Sharma', 'Rahul Verma', 'Arjun Patel'];
+  const shares = [55, 30, 15];
+
+  const contributors: ContributorData[] = names.map((name, i) => ({
+    name,
+    commits:        Math.round(((team.commits ?? 200) * shares[i % shares.length]) / 100),
+    additions:      rnd(400, 1600),
+    deletions:      rnd(80, 400),
+    activity_score: rnd(55, 99),
+  }));
+
+  return {
+    team_id: teamId,
+    summary: {
+      total_commits:       contributors.reduce((a, c) => a + (c.commits ?? 0), 0),
+      total_contributors:  contributors.length,
+      total_additions:     contributors.reduce((a, c) => a + (c.additions ?? 0), 0),
+      total_deletions:     contributors.reduce((a, c) => a + (c.deletions ?? 0), 0),
+      active_days:         rnd(18, 28),
+    },
+    timeline,
+    contributors,
+    ai_insights: [
+      `${names[0]} leads commit activity — consider pairing with ${names[names.length - 1]} for knowledge sharing.`,
+      'Velocity trending upward over the last 7 days.',
+      `Code coverage at ${team.coverage ?? 75}% — add tests for new endpoints to push past 90%.`,
+    ],
+  };
+}
+
+export const MOCK_TASKS: Task[] = [
+  { id: 't1', title: 'Design landing page',  status: 'done',        priority: 'high',   assignee: 'Priya Sharma', team_id: 'team-1' },
+  { id: 't2', title: 'Build auth API',        status: 'in_progress', priority: 'high',   assignee: 'Rahul Verma',  team_id: 'team-1' },
+  { id: 't3', title: 'Write unit tests',      status: 'todo',        priority: 'medium', assignee: 'Arjun Patel',  team_id: 'team-1' },
+  { id: 't4', title: 'Setup MongoDB',         status: 'done',        priority: 'high',   assignee: 'Ananya Singh', team_id: 'team-2' },
+  { id: 't5', title: 'Dashboard charts',      status: 'review',      priority: 'medium', assignee: 'Kavya Nair',   team_id: 'team-2' },
+  { id: 't6', title: 'Deploy to Vercel',      status: 'todo',        priority: 'low',    assignee: 'Rohit Mehta',  team_id: 'team-2' },
+  { id: 't7', title: 'GitHub integration',    status: 'in_progress', priority: 'high',   assignee: 'Sneha Reddy',  team_id: 'team-3' },
+  { id: 't8', title: 'RAG chatbot',           status: 'todo',        priority: 'high',   assignee: 'Vikram Iyer',  team_id: 'team-3' },
+  { id: 't9', title: 'Presentation slides',   status: 'todo',        priority: 'low',    assignee: 'Pooja Gupta',  team_id: 'team-3' },
+];
+
+export const MOCK_EVENTS: CalendarEvent[] = [
+  { id: 'e1', title: 'Sprint 3 Start',      date: new Date().toISOString().slice(0, 10),                           type: 'sprint',    team_id: 'team-1' },
+  { id: 'e2', title: 'Mid-term Review',     date: new Date(Date.now() + 3  * 864e5).toISOString().slice(0, 10),   type: 'review',    team_id: 'team-1' },
+  { id: 'e3', title: 'Auth Module Due',     date: new Date(Date.now() + 7  * 864e5).toISOString().slice(0, 10),   type: 'deadline',  team_id: 'team-1' },
+  { id: 'e4', title: 'Project Milestone 2', date: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10),   type: 'milestone', team_id: 'team-1' },
+];
